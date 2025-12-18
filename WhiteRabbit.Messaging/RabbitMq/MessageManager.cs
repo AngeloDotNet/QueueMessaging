@@ -6,7 +6,7 @@ using WhiteRabbit.Messaging.Abstractions;
 
 namespace WhiteRabbit.Messaging.RabbitMq;
 
-internal class MessageManager : IMessageSender, IDisposable
+internal class MessageManager : IMessageSender, IAsyncDisposable
 {
     private const string MaxPriorityHeader = "x-max-priority";
 
@@ -16,19 +16,26 @@ internal class MessageManager : IMessageSender, IDisposable
     private readonly MessageManagerSettings messageManagerSettings;
     private readonly QueueSettings queueSettings;
 
-    public MessageManager(MessageManagerSettings messageManagerSettings, QueueSettings queueSettings)
+    private MessageManager(MessageManagerSettings messageManagerSettings, QueueSettings queueSettings)
+    {
+        this.messageManagerSettings = messageManagerSettings;
+        this.queueSettings = queueSettings;
+    }
+
+    public static async Task<MessageManager> CreateAsync(MessageManagerSettings messageManagerSettings, QueueSettings queueSettings)
     {
         var factory = new ConnectionFactory { Uri = new Uri(messageManagerSettings.ConnectionString) };
+        var manager = new MessageManager(messageManagerSettings, queueSettings);
 
-        Connection = factory.CreateConnectionAsync().GetAwaiter().GetResult();
-        Channel = Connection.CreateChannelAsync().GetAwaiter().GetResult();
+        manager.Connection = await factory.CreateConnectionAsync().ConfigureAwait(false);
+        manager.Channel = await manager.Connection.CreateChannelAsync().ConfigureAwait(false);
 
         if (messageManagerSettings.QueuePrefetchCount > 0)
         {
-            Channel.BasicQosAsync(0, messageManagerSettings.QueuePrefetchCount, false);
+            await manager.Channel.BasicQosAsync(0, messageManagerSettings.QueuePrefetchCount, false).ConfigureAwait(false);
         }
 
-        Channel.ExchangeDeclareAsync(messageManagerSettings.ExchangeName, ExchangeType.Direct, durable: true);
+        await manager.Channel.ExchangeDeclareAsync(messageManagerSettings.ExchangeName, ExchangeType.Direct, durable: true).ConfigureAwait(false);
 
         foreach (var (queue, args)
             in from (string Name, Type Type) queue in queueSettings.Queues
@@ -38,12 +45,11 @@ internal class MessageManager : IMessageSender, IDisposable
                }
                select (queue, args))
         {
-            Channel.QueueDeclareAsync(queue.Name, durable: true, exclusive: false, autoDelete: false, args);
-            Channel.QueueBindAsync(queue.Name, messageManagerSettings.ExchangeName, queue.Name, null);
+            await manager.Channel.QueueDeclareAsync(queue.Name, durable: true, exclusive: false, autoDelete: false, args).ConfigureAwait(false);
+            await manager.Channel.QueueBindAsync(queue.Name, messageManagerSettings.ExchangeName, queue.Name, null).ConfigureAwait(false);
         }
 
-        this.messageManagerSettings = messageManagerSettings;
-        this.queueSettings = queueSettings;
+        return manager;
     }
 
     public Task PublishAsync<T>(T message, int priority = 1) where T : class
@@ -70,18 +76,18 @@ internal class MessageManager : IMessageSender, IDisposable
     public void MarkAsComplete(BasicDeliverEventArgs message) => Channel.BasicAckAsync(message.DeliveryTag, false);
     public void MarkAsRejected(BasicDeliverEventArgs message) => Channel.BasicRejectAsync(message.DeliveryTag, false);
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         try
         {
-            if (Channel.IsOpen)
+            if (Channel?.IsOpen == true)
             {
-                Channel.CloseAsync().GetAwaiter().GetResult();
+                await Channel.CloseAsync().ConfigureAwait(false);
             }
 
-            if (Connection.IsOpen)
+            if (Connection?.IsOpen == true)
             {
-                Connection.CloseAsync().GetAwaiter().GetResult();
+                await Connection.CloseAsync().ConfigureAwait(false);
             }
         }
         catch
