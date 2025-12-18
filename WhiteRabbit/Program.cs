@@ -1,4 +1,4 @@
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using WhiteRabbit.Messaging.RabbitMq;
 using WhiteRabbit.Receivers;
 using WhiteRabbit.Shared;
@@ -55,7 +55,6 @@ void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     }
 
     app.UseHttpsRedirection();
-
     app.UseRouting();
 
     app.UseEndpoints(endpoints =>

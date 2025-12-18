@@ -2,12 +2,7 @@
 
 namespace WhiteRabbit.Messaging.Abstractions;
 
-internal class DefaultMessagingBuilder : IMessagingBuilder
+internal class DefaultMessagingBuilder(IServiceCollection services) : IMessagingBuilder
 {
-    public IServiceCollection Services { get; }
-
-    public DefaultMessagingBuilder(IServiceCollection services)
-    {
-        Services = services;
-    }
+    public IServiceCollection Services { get; } = services;
 }

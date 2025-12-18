@@ -6,15 +6,8 @@ namespace WhiteRabbit.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class OrdersController : ControllerBase
+public class OrdersController(IMessageSender messageSender) : ControllerBase
 {
-    private readonly IMessageSender messageSender;
-
-    public OrdersController(IMessageSender messageSender)
-    {
-        this.messageSender = messageSender;
-    }
-
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status202Accepted)]
     public async Task<IActionResult> Post(Order order)

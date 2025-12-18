@@ -5,7 +5,8 @@ namespace WhiteRabbit.Messaging.RabbitMq;
 
 public static class RabbitMQExtensions
 {
-    public static IMessagingBuilder AddRabbitMq(this IServiceCollection services, Action<MessageManagerSettings> messageManagerConfiguration, Action<QueueSettings> queuesConfiguration)
+    public static IMessagingBuilder AddRabbitMq(this IServiceCollection services, Action<MessageManagerSettings> messageManagerConfiguration,
+        Action<QueueSettings> queuesConfiguration)
     {
         services.AddSingleton<MessageManager>();
         services.AddSingleton<IMessageSender>(provider => provider.GetService<MessageManager>());

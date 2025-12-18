@@ -3,22 +3,15 @@ using WhiteRabbit.Shared;
 
 namespace WhiteRabbit.Receivers;
 
-public class OrderMessageReceiver : IMessageReceiver<Order>
+public class OrderMessageReceiver(ILogger<OrderMessageReceiver> logger, IMessageSender messageSender) : IMessageReceiver<Order>
 {
-    private readonly ILogger logger;
-    private readonly IMessageSender messageSender;
-
-    public OrderMessageReceiver(ILogger<OrderMessageReceiver> logger, IMessageSender messageSender)
-    {
-        this.logger = logger;
-        this.messageSender = messageSender;
-    }
+    private readonly ILogger logger = logger;
 
     public async Task ReceiveAsync(Order message, CancellationToken cancellationToken)
     {
         logger.LogInformation("Processing order {OrderNumber}...", message.Number);
 
-        await Task.Delay(TimeSpan.FromSeconds(10 + Random.Shared.Next(10)));
+        await Task.Delay(TimeSpan.FromSeconds(10 + Random.Shared.Next(10)), cancellationToken);
 
         logger.LogInformation("End processing order {OrderNumber}", message.Number);
 

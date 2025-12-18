@@ -8,25 +8,13 @@ using WhiteRabbit.Messaging.Abstractions;
 
 namespace WhiteRabbit.Messaging.ServiceBus;
 
-internal class QueueListener<T> : BackgroundService, IAsyncDisposable where T : class
+internal class QueueListener<T>(MessageManager messageManager, MessageManagerSettings messageManagerSettings, QueueSettings settings,
+    ILogger<QueueListener<T>> logger, IServiceProvider serviceProvider) : BackgroundService, IAsyncDisposable where T : class
 {
-    private readonly MessageManager messageManager;
-    private readonly MessageManagerSettings messageManagerSettings;
-    private readonly ILogger logger;
-    private readonly IServiceProvider serviceProvider;
-    private readonly string queueName;
+    private readonly ILogger logger = logger;
+    private readonly string queueName = settings.Queues.First(q => q.Type == typeof(T)).Name;
 
     private ServiceBusReceiver serviceBusReceiver;
-
-    public QueueListener(MessageManager messageManager, MessageManagerSettings messageManagerSettings, QueueSettings settings, ILogger<QueueListener<T>> logger, IServiceProvider serviceProvider)
-    {
-        this.messageManager = messageManager;
-        this.messageManagerSettings = messageManagerSettings;
-        this.logger = logger;
-        this.serviceProvider = serviceProvider;
-
-        queueName = settings.Queues.First(q => q.Type == typeof(T)).Name;
-    }
 
     public override Task StartAsync(CancellationToken cancellationToken)
     {

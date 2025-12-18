@@ -3,29 +3,16 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using WhiteRabbit.Messaging.Abstractions;
 
 namespace WhiteRabbit.Messaging.RabbitMq;
 
-internal class QueueListener<T> : BackgroundService where T : class
+internal class QueueListener<T>(MessageManager messageManager, MessageManagerSettings messageManagerSettings, QueueSettings settings,
+    ILogger<QueueListener<T>> logger, IServiceProvider serviceProvider) : BackgroundService where T : class
 {
-    private readonly MessageManager messageManager;
-    private readonly MessageManagerSettings messageManagerSettings;
-    private readonly ILogger logger;
-    private readonly IServiceProvider serviceProvider;
-    private readonly string queueName;
-
-    public QueueListener(MessageManager messageManager, MessageManagerSettings messageManagerSettings, QueueSettings settings, ILogger<QueueListener<T>> logger, IServiceProvider serviceProvider)
-    {
-        this.messageManager = messageManager;
-        this.messageManagerSettings = messageManagerSettings;
-        this.logger = logger;
-        this.serviceProvider = serviceProvider;
-
-        queueName = settings.Queues.First(q => q.Type == typeof(T)).Name;
-    }
+    private readonly ILogger logger = logger;
+    private readonly string queueName = settings.Queues.First(q => q.Type == typeof(T)).Name;
 
     public override Task StartAsync(CancellationToken cancellationToken)
     {
@@ -45,8 +32,8 @@ internal class QueueListener<T> : BackgroundService where T : class
     {
         stoppingToken.ThrowIfCancellationRequested();
 
-        var consumer = new EventingBasicConsumer(messageManager.Channel);
-        consumer.Received += async (_, message) =>
+        var consumer = new AsyncEventingBasicConsumer(messageManager.Channel);
+        consumer.ReceivedAsync += async (_, message) =>
         {
             try
             {
@@ -71,7 +58,7 @@ internal class QueueListener<T> : BackgroundService where T : class
             stoppingToken.ThrowIfCancellationRequested();
         };
 
-        messageManager.Channel.BasicConsume(queueName, autoAck: false, consumer);
+        messageManager.Channel.BasicConsumeAsync(queueName, false, null, false, false, null, consumer, stoppingToken);
 
         return Task.CompletedTask;
     }
