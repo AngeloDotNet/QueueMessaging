@@ -25,9 +25,11 @@ internal class MessageManager : IMessageSender, IAsyncDisposable
     public static async Task<MessageManager> CreateAsync(MessageManagerSettings messageManagerSettings, QueueSettings queueSettings)
     {
         var factory = new ConnectionFactory { Uri = new Uri(messageManagerSettings.ConnectionString) };
-        var manager = new MessageManager(messageManagerSettings, queueSettings);
+        var manager = new MessageManager(messageManagerSettings, queueSettings)
+        {
+            Connection = await factory.CreateConnectionAsync().ConfigureAwait(false)
+        };
 
-        manager.Connection = await factory.CreateConnectionAsync().ConfigureAwait(false);
         manager.Channel = await manager.Connection.CreateChannelAsync().ConfigureAwait(false);
 
         if (messageManagerSettings.QueuePrefetchCount > 0)
