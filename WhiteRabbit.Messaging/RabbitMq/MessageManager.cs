@@ -25,7 +25,7 @@ internal class MessageManager : IMessageSender, IDisposable
 
         if (messageManagerSettings.QueuePrefetchCount > 0)
         {
-            Channel.BasicQosAsync(0, messageManagerSettings.QueuePrefetchCount, false);
+            Channel.BasicQosAsync(0, messageManagerSettings.QueuePrefetchCount, false).GetAwaiter().GetResult();
         }
 
         Channel.ExchangeDeclareAsync(messageManagerSettings.ExchangeName, ExchangeType.Direct, durable: true);
